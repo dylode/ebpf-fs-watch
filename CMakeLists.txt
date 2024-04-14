@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(ebpf-fs-watch C)
 
-add_executable(${PROJECT_NAME} main.c)
 
 include(ExternalProject)
 ExternalProject_Add(libbpf
@@ -50,5 +49,17 @@ endif()
 set(LIBBPF_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libbpf)
 set(LIBBPF_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a)
 
+set(BPF_C_FILE ${CMAKE_CURRENT_SOURCE_DIR}/watch.bpf.c})
+set(BPF_O_FILE ${CMAKE_CURRENT_BINARY_DIR}/watch.bpf.o)
+
+add_custom_command(OUTPUT ${BPF_O_FILE}
+  COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf
+          -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
+  COMMAND_EXPAND_LISTS
+  VERBATIM
+  DEPENDS ${BPF_C_FILE}
+  COMMENT "[clang] Building BPF object: ${name}")
+
+add_executable(${PROJECT_NAME} watch.c)
 target_include_directories(${PROJECT_NAME} PRIVATE ${LIBBPF_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBBPF_LIBRARIES} -lelf -lz)

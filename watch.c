@@ -9,6 +9,5 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 int main()
 {
     libbpf_set_print(libbpf_print_fn);
-    libbpf_prog_load();
     printf("hello world");
 }
