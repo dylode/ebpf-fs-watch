@@ -22,6 +22,31 @@ ExternalProject_Add(libbpf
   STEP_TARGETS build
 )
 
+ExternalProject_Add(bpftool
+  PREFIX bpftool
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bpftool/src
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND make bootstrap
+    OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/bpftool/
+  BUILD_IN_SOURCE TRUE
+  INSTALL_COMMAND ""
+  STEP_TARGETS build
+)
+
+set(GENERATED_VMLINUX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(BPFOBJECT_VMLINUX_H ${GENERATED_VMLINUX_DIR}/vmlinux.h)
+set(BPFOBJECT_BPFTOOL_EXE ${CMAKE_CURRENT_BINARY_DIR}/bpftool/bootstrap/bpftool)
+
+execute_process(COMMAND ${BPFOBJECT_BPFTOOL_EXE} btf dump file /sys/kernel/btf/vmlinux format c
+  OUTPUT_FILE ${BPFOBJECT_VMLINUX_H}
+  ERROR_VARIABLE VMLINUX_error
+  RESULT_VARIABLE VMLINUX_result)
+if(${VMLINUX_result} EQUAL 0)
+  set(VMLINUX ${BPFOBJECT_VMLINUX_H})
+else()
+  message(FATAL_ERROR "Failed to dump vmlinux.h from BTF: ${VMLINUX_error}")
+endif()
+
 set(LIBBPF_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libbpf)
 set(LIBBPF_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a)
 
