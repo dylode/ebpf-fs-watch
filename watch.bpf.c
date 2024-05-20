@@ -28,8 +28,6 @@ int handle_sys_enter_write(struct exec_params_t *ctx)
 
     struct dentry *d = BPF_CORE_READ(f, f_path.dentry);
     struct dentry *d_parent;
-    unsigned char *name;
-    unsigned char name2;
     struct ringbuf_event *e;
 
     e = bpf_ringbuf_reserve(&ringbuf, sizeof(*e), 0);
@@ -39,21 +37,15 @@ int handle_sys_enter_write(struct exec_params_t *ctx)
         return 0;
     }
 
-    int i = 0;
+    int i;
 
     const char *p;
 
-    bpf_repeat(1)
+#pragma unroll
+    for (i = 0; i < 64; i++)
     {
         p = BPF_CORE_READ(d, d_name.name);
-        // bpf_core_read(&p, sizeof(p), &d->d_name.name);
-        bpf_probe_read_kernel_str(e->path_elements, sizeof(e->path_elements), p);
-
-        // BPF_CORE_READ_STR_INTO(e->path_elements, d, d_name.name);
-        // BPF_CORE_READ_STR_INTO(&e->path_elements, d, d_name.name);
-        // bpf_probe_read_kernel_str(&e->path_elements, sizeof(e->path_elements), name);
-
-        // bpf_probe_read_kernel_str(e->path_elements, sizeof(e->path_elements), d->d_name.name);
+        bpf_probe_read_kernel_str(e->path_elements[i], sizeof(e->path_elements[i]), p);
 
         d_parent = BPF_CORE_READ(d, d_parent);
         if (d == d_parent)
@@ -65,7 +57,7 @@ int handle_sys_enter_write(struct exec_params_t *ctx)
         i++;
     }
 
-    e->path_elements_length = i + 1;
+    e->path_elements_length = i;
     bpf_ringbuf_submit(e, 0);
 
     return 0;

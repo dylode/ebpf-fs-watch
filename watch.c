@@ -28,7 +28,14 @@ static int handle_evt(void *ctx, void *data, size_t sz)
 {
     const struct ringbuf_event *evt = data;
 
-    fprintf(stdout, "path elements: %d %s\n", evt->path_elements_length, evt->path_elements);
+    for (int i = evt->path_elements_length - 1; i >= 0; i--)
+    {
+        fprintf(stdout, "%s ", evt->path_elements[i]);
+    }
+
+    fprintf(stdout, "\n");
+
+    // fprintf(stdout, "path elements: %d 0: %s 1: %s 2: %s 3: %s 4: %s 5: %s\n", evt->path_elements_length, evt->path_elements[0], evt->path_elements[1], evt->path_elements[1], evt->path_elements[2], evt->path_elements[3], evt->path_elements[4], evt->path_elements[5]);
 
     return 0;
 }
@@ -48,5 +55,4 @@ int main()
     {
         ring_buffer__poll(rb, 1000);
     }
-    return 0;
 }
