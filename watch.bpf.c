@@ -39,14 +39,69 @@ struct exec_params_t
     unsigned int fd;
 };
 
-static bool local_strcmp(const char *cs, const char *ct)
+inline bool local_strcmp(const char *a, int a_length, const char *b, const int b_length)
 {
+    // bpf_printk("a: %s b: %s", a, b);
+
+    // int i;
+
+    // for (int i = 0; i < 16; i++)
+    //{
+    //     if (a[i] != b[i])
+    //         return false;
+    // }
+    // return true;
+
     unsigned char c1, c2;
 
-    bpf_repeat(PATH_SEGMENT_LEN)
+    // for (int i = 0; i < 32; i++)
+    //{
+    //     c1 = *(cs + i);
+    //     c2 = *(ct + i);
+    //     if (c1 == '\0' || c2 == '\0')
+    //     {
+    //         return false;
+    //     }
+
+    //    if (c1 != c2)
+    //    {
+    //        return false;
+    //    }
+    //}
+
+    for (int i = 0; i < PATH_SEGMENT_LEN; i++)
     {
-        c1 = *cs++;
-        c2 = *ct++;
+        if (i < a_length)
+        {
+            c1 = a[i];
+            // bpf_printk("%d %d %c", i, a_length, c1);
+            //  c2 = *(b + i);
+
+            // if (c1 != c2)
+            //{
+            //    return false;
+            //}
+        }
+        else
+        {
+            break;
+        }
+
+        if (i < b_length)
+        {
+            c2 = b[i];
+            // bpf_printk("%d %d %c", i, b_length, c2);
+            //  c2 = *(b + i);
+
+            // if (c1 != c2)
+            //{
+            //    return false;
+            //}
+        }
+        else
+        {
+            break;
+        }
 
         if (c1 != c2)
         {
@@ -54,12 +109,16 @@ static bool local_strcmp(const char *cs, const char *ct)
         }
     }
 
+    // bpf_repeat(PATH_SEGMENT_LEN)
+    //{
+    // }
+
     return true;
 }
 
-static int filter(struct bpf_map *map, const void *key, struct path_elements *value, struct filter_ctx *ctx)
+inline static int filter(struct bpf_map *map, const void *key, struct path_elements *current_element, struct filter_ctx *ctx)
 {
-    if (value->path_elements_length == 0)
+    if (current_element->path_elements_length == 0)
     {
         return 0; // continue to next entry in map
     }
@@ -72,36 +131,84 @@ static int filter(struct bpf_map *map, const void *key, struct path_elements *va
         return 1; // stop the foreach if there are no path elements in the buffer
     }
 
-    if (value->path_elements_length > path_elements_buffer->path_elements_length)
+    if (current_element->path_elements_length > path_elements_buffer->path_elements_length)
     {
         return 0;
     }
 
-    int i = 0;
-    int j = value->path_elements_length - 1;
+    // int i = 0;
+    int j = path_elements_buffer->path_elements_length - 1;
 
-    bpf_repeat(PATH_SEGMENTS)
+    for (int i = 0; i < PATH_SEGMENTS; i++)
     {
-        if (i > value->path_elements_length - 1)
+        if (j >= 0 && j <= PATH_SEGMENTS)
         {
-            break;
-        }
+            unsigned char *a, *b;
+            a = current_element->path_elements[i];
+            b = path_elements_buffer->path_elements[j];
 
-        if (i >= 0 && i < PATH_SEGMENTS)
-        {
-            if (j >= 0 && j < PATH_SEGMENTS)
-            {
-                if (local_strcmp(value->path_elements[i], path_elements_buffer->path_elements[j]))
-                {
-                    ctx->is_relevant = true;
-                    return 1;
-                }
-            }
-        }
+            // #pragma unroll
+            //             for (int k = 0; k < 16; k++)
+            //             {
+            //
+            //                 bpf_printk("%c %c", a[0], b[0]);
+            //                 // if (a[k] != b[k])
+            //                 //     return false;
+            //             }
+            //             return true;
+            //
+            //  const char *p;
 
-        i++;
+            //__builtin_memcpy(p, b, 5);
+
+            // bpf_printk("%c %c", a[1], b[1]);
+
+            // if (local_strcmp(a, p))
+            //{
+            //     ctx->is_relevant = true;
+            //     return 1;
+            // }
+        }
+        // if (j < 0)
+        //{
+        //     break;
+        // }
+
+        // if (j > PATH_SEGMENTS)
+        //{
+        //     j = PATH_SEGMENT_LEN;
+        // }
+
         j--;
     }
+
+    // bpf_repeat(PATH_SEGMENTS)
+    //{
+    //     if (i > current_element->path_elements_length - 1)
+    //     {
+    //         break;
+    //     }
+
+    //    if (j < 0)
+    //    {
+    //        break;
+    //    }
+
+    //    // if (i >= 0 && i < PATH_SEGMENTS)
+    //    //{
+    //    //     if (j >= 0 && j < PATH_SEGMENTS)
+    //    //     {
+    //    if (local_strcmp(current_element->path_elements[i], path_elements_buffer->path_elements[j]))
+    //    {
+    //        ctx->is_relevant = true;
+    //        return 1;
+    //    }
+    //    //     }
+    //    // }
+
+    //    i++;
+    //    j--;
+    //}
 
     // #pragma unroll
     //     for (int i = 0; i < 64; i++)
@@ -153,12 +260,19 @@ int handle_sys_enter_write(struct exec_params_t *ctx)
     int i;
 
     const char *p;
+    u32 length;
 
-#pragma unroll
-    for (i = 0; i < 64; i++)
+    for (i = 0; i < 16; i++)
     {
         p = BPF_CORE_READ(d, d_name.name);
+        length = BPF_CORE_READ(d, d_name.len);
+
         bpf_probe_read_kernel_str(path_elements_buffer->path_elements[i], PATH_SEGMENT_LEN, p);
+
+        if (local_strcmp("tty", 3, path_elements_buffer->path_elements[i], length))
+        {
+            bpf_printk("%s", p);
+        }
 
         d_parent = BPF_CORE_READ(d, d_parent);
         if (d == d_parent)
@@ -167,7 +281,6 @@ int handle_sys_enter_write(struct exec_params_t *ctx)
         }
 
         d = d_parent;
-        i++;
     }
 
     path_elements_buffer->path_elements_length = i;
