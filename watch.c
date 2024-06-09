@@ -53,8 +53,12 @@ int main()
 
     unsigned int key = 0;
     struct path_elements first;
-    first.path_elements_length = 1;
-    strcpy(first.path_elements[0], "hello world");
+    first.path_elements_length = 2;
+    strcpy(first.path_elements[0], "/");
+    strcpy(first.path_elements[1], "etc");
+
+    // strcpy(first.path_elements[1], "etc");
+    //  strcpy(first.path_elements[1], "foo bar");
 
     bpf_map__update_elem(skel->maps.relevant_paths, &key, sizeof(key), &first, sizeof(first), 0);
 

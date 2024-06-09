@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(ebpf-fs-watch C)
 
+set(CMAKE_C_COMPILER "clang-15")
+
 
 include(ExternalProject)
 ExternalProject_Add(libbpf
@@ -53,7 +55,7 @@ set(BPF_C_FILE ${CMAKE_CURRENT_SOURCE_DIR}/watch.bpf.c)
 set(BPF_O_FILE ${CMAKE_CURRENT_BINARY_DIR}/watch.bpf.o)
 
 add_custom_target(watch-ebpf 
-  COMMAND clang -g -O2 -target bpf
+  COMMAND clang-15 -g -O2 -target bpf
           -I ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
   VERBATIM 
 )
