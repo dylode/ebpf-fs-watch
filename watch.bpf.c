@@ -268,6 +268,8 @@ static int filter(struct bpf_map *map, const void *key, struct path_elements *cu
         length = 0;
     }
 
+    path_segment x;
+
     int i = 0;
     int j = ctx->last_index;
     bool is_relevant = false;
@@ -286,16 +288,49 @@ static int filter(struct bpf_map *map, const void *key, struct path_elements *cu
 
         path_segment *b = current_element->path_elements[i];
 
-        if (__builtin_memcmp(a, b, 1) == 0)
+        // long size_a = bpf_probe_read_str(NULL, PATH_SEGMENT_LEN, a);
+        // long size_b = bpf_probe_read_str(NULL, PATH_SEGMENT_LEN, b);
+
+        // bpf_printk("%d %d", size_a, size_b);
+        for (int o = 0; a[o] != '\0'; o++)
         {
-            // bpf_printk("%s equals %s", a, b);
-            is_relevant = true;
+            if (o > PATH_SEGMENT_LEN)
+            {
+                bpf_printk("stop");
+                break;
+            }
+            bpf_printk("%s Character at index %d: %c\n", a, i, a[i]);
         }
-        else
-        {
-            // bpf_printk("%s not equals %s", a, b);
-            is_relevant = false;
-        }
+
+        // unsigned int o = 0;
+        // unsigned char x, y;
+
+        // bpf_repeat(PATH_SEGMENT_LEN)
+        //{
+        //     if (o > PATH_SEGMENT_LEN)
+        //     {
+        //         break;
+        //     }
+        //     x = *a[o];
+        //     y = *b[o];
+        //     if (x == '\0' || y == '\0')
+        //     {
+        //         break;
+        //     }
+        //     bpf_printk("%c %c", x, y);
+        //     o++;
+        // }
+
+        // if (bpf_strncmp(a, PATH_SEGMENT_LEN, b) == 0)
+        //{
+        //     bpf_printk("%s equals %s", a, b);
+        //     is_relevant = true;
+        // }
+        // else
+        //{
+        //     bpf_printk("%s not equals %s", a, b);
+        //     is_relevant = false;
+        // }
 
         j--;
 
